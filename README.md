@@ -19,6 +19,6 @@ cve-workaround -v
 
 ### Notes
 
-Detects version and applies the relevant workarounds.
+Detects version and applies the relevant workarounds.  Skips and reports each workaround, if it thinks a workaround has been applied.
 
 Happy to hear any bugs / issues.

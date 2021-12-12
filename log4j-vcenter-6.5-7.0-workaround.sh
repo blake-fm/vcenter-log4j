@@ -1,4 +1,4 @@
-# Applies recommendations in: https://kb.vmware.com/s/article/87081?lang=en_US#vCenter7.0
+# Applies recommendations in: https://kb.vmware.com/s/article/87081
 # Should work for all versions, tested on 6.7 and 7.0 U3b
 #
 # Easiest usage is just copy/paste the whole thing into bash, and run:

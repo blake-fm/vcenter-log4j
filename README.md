@@ -21,4 +21,16 @@ cve-workaround -v
 
 Detects version and applies the relevant workarounds.  Skips and reports per workaround step, if it thinks that workaround has been applied - re-execute safe.
 
+During my own testing - apply, rollback, re-re-re-apply - I ran across some issues with permissions on 6.7, which prevented some vCenter services from starting (and I still can't find any evidence of an actual error message being logged).  Should you experience similar behaviour, this is the hammer I have been using to beat things into submission.
+```
+chmod 774 /usr/lib/vmware-vmon/java-wrapper-vmon
+chown root:cis /usr/lib/vmware-vmon/java-wrapper-vmon
+chmod 644 /usr/lib/vmware-updatemgr/bin/jetty/start.ini
+chown updatemgr:updatemgr /usr/lib/vmware-updatemgr/bin/jetty/start.ini
+chmod 440 /usr/lib/vmware/common-jars/log4j-core-2.8.2.jar
+chown root:cis /usr/lib/vmware/common-jars/log4j-core-2.8.2.jar
+chmod 755 /usr/lib/vmware-cm/lib/log4j-core.jar
+chown cm:cis /usr/lib/vmware-cm/lib/log4j-core.jar
+```
+
 Happy to hear any bugs / issues.

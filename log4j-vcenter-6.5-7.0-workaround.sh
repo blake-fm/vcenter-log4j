@@ -121,14 +121,14 @@ cve-workaround () {
   # Verify
 
   # vMON
-  rawProcCount=$(ps aux | grep '/usr/java/jre-vmware/bin/' | wc -l)
-  trueProcCount=$(ps aux | grep formatMsgNoLookups=true | wc -l)
+  rawProcCount=$(ps auxww | grep '/usr/java/jre-vmware/bin/' | wc -l)
+  trueProcCount=$(ps auxww | grep formatMsgNoLookups=true | wc -l)
   biglogmsg "Verification:"
   logmsg "Number of processes running formatMsgNoLookups=true: $trueProcCount"
   if [ $rawProcCount -eq $trueProcCount ]; then
     logmsg "Confirmed" "vMON - All JRE processes are running workaround."
   else
-    logmsg "ERROR" "Process count mismatch.  Confirm using: ps aux | grep formatMsgNoLookups"
+    logmsg "ERROR" "Process count mismatch.  Confirm using: ps auxww | grep formatMsgNoLookups"
   fi
 
   if [ $version == '7.0' ]; then

@@ -58,8 +58,8 @@ cve-workaround () {
           logmsg "$currService" "Applying workaround..."
           cp -iv /usr/lib/vmware-updatemgr/bin/jetty/start.ini{,.bak}
           echo '# Workaround CVE-2021-44228
-          -Dlog4j2.formatMsgNoLookups=true
-          # END WORKAROUND' >> /usr/lib/vmware-updatemgr/bin/jetty/start.ini
+-Dlog4j2.formatMsgNoLookups=true
+# END WORKAROUND' >> /usr/lib/vmware-updatemgr/bin/jetty/start.ini
           biglogmsg "$currService" "Restarting..."
           service-control --restart vmware-updatemgr
         fi

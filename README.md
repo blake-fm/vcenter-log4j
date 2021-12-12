@@ -30,7 +30,7 @@ Detects version and applies the relevant workarounds.  Skips and reports per wor
 #### Services not starting / permissions fix
 During my own testing - apply, rollback, re-re-re-apply - I ran across some issues with permissions on 6.7, which prevented some vCenter services from starting (and I still can't find any evidence of an actual error message being logged).  Should you experience similar behaviour, this is the hammer I have been using to beat things into submission.
 ```
-chmod 774 /usr/lib/vmware-vmon/java-wrapper-vmon
+chmod 754 /usr/lib/vmware-vmon/java-wrapper-vmon
 chown root:cis /usr/lib/vmware-vmon/java-wrapper-vmon
 chmod 644 /usr/lib/vmware-updatemgr/bin/jetty/start.ini
 chown updatemgr:updatemgr /usr/lib/vmware-updatemgr/bin/jetty/start.ini

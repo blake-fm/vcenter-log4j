@@ -7,7 +7,9 @@ Basic script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as
 - Paste entire [contents of script](https://raw.githubusercontent.com/blake-fm/vcenter-log4j/main/log4j-vcenter-6.5-7.0-workaround.sh)
 - Type `cve`, hit tab, enter
 
-### Usage
+And you're done.
+
+### If you don't like quick and dirty..
 Apply workarounds and verify
 ```
 cve-workaround
@@ -16,12 +18,16 @@ Run verification only
 ```
 cve-workaround -v
 ```
+Rollback - very basic, copies the .bak files over the patched files, restarts the services, and prints status messages.
+```
+rollback-workaround
+```
 
-#### Notes
+### Notes
 
-Detects version and applies the relevant workarounds.  Skips and reports per workaround step, if it thinks that workaround has been applied - re-execute safe.
+Detects version and applies the relevant workarounds.  Skips and reports per workaround step, if it thinks that workaround has been applied (safe to re-execute).
 
-#### Services not starting / odd permissions
+#### Services not starting / permissions fix
 During my own testing - apply, rollback, re-re-re-apply - I ran across some issues with permissions on 6.7, which prevented some vCenter services from starting (and I still can't find any evidence of an actual error message being logged).  Should you experience similar behaviour, this is the hammer I have been using to beat things into submission.
 ```
 chmod 774 /usr/lib/vmware-vmon/java-wrapper-vmon

@@ -14,7 +14,7 @@ cve-workaround -v
 ### Quick and dirty
 - SSH to vCenter
 - Run `shell`
-- Paste entire contents of script
+- Paste entire [contents of script](https://raw.githubusercontent.com/blake-fm/vcenter-log4j/main/log4j-vcenter-6.5-7.0-workaround.sh)
 - Type `cve`, hit tab, enter
 
 ### Notes

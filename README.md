@@ -5,6 +5,8 @@ Script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as per t
 
 2021-12-13 12:46 UTC - Added PSC Client for 6.5 - see below
 
+VMware have released a python script linked on the KB article.  The initial teething problems with their version seem to have been resolved.
+
 ## Quick and dirty
 - SSH to vCenter
 - Run `shell`
@@ -21,9 +23,6 @@ And you're done.
 - Reports status as it goes
 - Provides a summary at the end - verification is more accurate / granular than the KB steps
 
-### What it does..n't
-- PSC Client.. ish - see below
-
 ### If you don't like quick and dirty..
 Apply workarounds and verify
 ```
@@ -37,7 +36,7 @@ Rollback - very basic, copies the .bak files over the patched files, restarts th
 ```
 cve-workaround -rollback
 ```
-PSC Client Service for 6.5 - 100% untested.  Any feedback is welcome.
+PSC Client Service for 6.5 - thank you to Power-Wagon on reddit for verifying
 ```
 cve-workaround -sprayandpray65
 ```

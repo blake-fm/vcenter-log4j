@@ -16,7 +16,7 @@ cve-workaround () {
     [ ${userInput::1} == "y" ] || [ ${userInput::1} == "Y" ] && internal-rollback
     return 0
   elif [ "$1" != "-v" ]; then
-    internal-apply-workaround
+    internal-apply-workaround "$1"
   fi
   internal-verify-workaround
 }
@@ -72,9 +72,9 @@ internal-apply-workaround () {
   fi
 
   # DBCC Utility
-  currService="DBCC Utility"
-  currFile="/usr/lib/vmware-dbcc/lib/log4j-core-2.8.2.jar"
   if [ $vCenterVersion == '7.0' ]; then
+    currService="DBCC Utility"
+    currFile="/usr/lib/vmware-dbcc/lib/log4j-core-2.8.2.jar"
     if internal-target-file-exists; then
       if [ $(grep -i jndilookup $currFile | wc -l) -eq 0 ]; then
         logmsg -skip
@@ -86,9 +86,9 @@ internal-apply-workaround () {
   fi
 
   # CM Service
-  currService="CM service"
-  currFile="/usr/lib/vmware-cm/lib/log4j-core.jar"
   if [ $vCenterVersion == '6.7' ] || [ $vCenterVersion == '6.5' ]; then
+    currService="CM service"
+    currFile="/usr/lib/vmware-cm/lib/log4j-core.jar"
     if internal-target-file-exists; then
       if [ $(grep -i jndilookup $currFile | wc -l) -eq 0 ]; then
         logmsg -skip
@@ -99,10 +99,10 @@ internal-apply-workaround () {
     fi
   fi
 
-  # Secure Token Service
-  currService="Secure Token Service"
-  currFile="/etc/rc.d/init.d/vmware-stsd"
   if [ $vCenterVersion == '6.7' ] || [ $vCenterVersion == '6.5' ]; then
+    # Secure Token Service
+    currService="Secure Token Service"
+    currFile="/etc/rc.d/init.d/vmware-stsd"
     if internal-target-file-exists; then
       if [ $(grep -E '^[ ]+-Dlog4j2.formatMsgNoLookups=true \\$' $currFile | wc -l) -gt 0 ]; then
         logmsg -skip
@@ -111,18 +111,29 @@ internal-apply-workaround () {
         internal-restart-service vmware-stsd
       fi
     fi
-  fi
-
-  # Identity Management Service
-  currService="Identity Management"
-  currFile="/etc/rc.d/init.d/vmware-sts-idmd"
-  if [ $vCenterVersion == '6.7' ] || [ $vCenterVersion == '6.5' ]; then
+    # Identity Management Service
+    currService="Identity Management Service"
+    currFile="/etc/rc.d/init.d/vmware-sts-idmd"
     if internal-target-file-exists; then
       if [ $(grep -E '^[ ]+-Dlog4j2.formatMsgNoLookups=true \\$' $currFile | wc -l) -gt 0 ]; then
         logmsg -skip
       else
         internal-create-backup-and-verify && sed -r 's#([ ]+)(-Dlog4j.configurationFile=file://\$PREFIX/share/config/log4j2.xml \\)#\1\2\n\1-Dlog4j2.formatMsgNoLookups=true \\#' $currFile.bak > $currFile
         internal-restart-service vmware-sts-idmd
+      fi
+    fi
+  fi
+
+  # PSC Client Service
+  if [ "$1" == "-sprayandpray65" ] && [ $vCenterVersion == '6.5' ]; then
+    currService="PSC Client Service"
+    currFile="/etc/rc.d/init.d/vmware-psc-client"
+    if internal-target-file-exists; then
+      if [ $(grep -E '^[ ]+-Dlog4j2.formatMsgNoLookups=true \\$' $currFile | wc -l) -gt 0 ]; then
+        logmsg -skip
+      else
+        internal-create-backup-and-verify && sed -r 's#([ ]+)(-Djava.io.tmpdir="\$CATALINA_BASE/temp" \\)#\1\2\n\1-Dlog4j2.formatMsgNoLookups=true \\#' $currFile.bak > $currFile
+        internal-restart-service vmware-psc-client
       fi
     fi
   fi
@@ -189,20 +200,25 @@ internal-verify-workaround () {
     fi
   fi
 
-  # CM Service
   if [ $vCenterVersion == '6.7' ] || [ $vCenterVersion == '6.5' ]; then
+    # CM Service
     cmCount=$(grep -i jndilookup /usr/lib/vmware-cm/lib/log4j-core.jar | wc -l)
     if [ $cmCount -eq 0 ]; then
       logmsg -confirm "CM Service workaround."
     else
       logmsg -error "CM Service reports that JndiLookup has not been removed."
     fi
-  # Secure Token Service
+    # Secure Token Service
     currService="Secure Token Service"
     internal-check-process "vmware-stsd"
-  # Identity Management Service
+    # Identity Management Service
     currService="Identity Management Service"
     internal-check-process "vmware-sts-idmd"
+    # PSC Client Service
+    if [ $vCenterVersion == '6.5' ]; then
+      currService="PSC Client Service"
+      internal-check-process "vmware-psc-client"
+    fi
   fi
 }
 internal-rollback () {
@@ -240,6 +256,11 @@ internal-rollback () {
   currService="Identity Management Service"
   currFile="/etc/rc.d/init.d/vmware-sts-idmd"
   internal-restore-and-restart "vmware-sts-idmd"
+
+  # PSC Client Service
+  currService="PSC Client Service"
+  currFile="/etc/rc.d/init.d/vmware-psc-client"
+  internal-restore-and-restart "vmware-psc-client"
 }
 internal-restore-and-restart () {
   if [ -f $currFile.bak ]; then

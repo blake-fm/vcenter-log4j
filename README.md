@@ -1,7 +1,7 @@
 # VMware vCenter log4j workaround
 Basic script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as per the [VMware KB article](https://kb.vmware.com/s/article/87081).
 
-2021-12-13 00:09 UTC - Added Secure Token & Identity Management services
+2021-12-13 02:09 UTC - Added Secure Token & Identity Management services
 
 ## Quick and dirty
 - SSH to vCenter

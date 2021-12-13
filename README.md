@@ -1,5 +1,5 @@
 # VMware vCenter log4j workaround
-Basic script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as per the [VMware KB article](https://kb.vmware.com/s/article/87081).
+Script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as per the [VMware KB article](https://kb.vmware.com/s/article/87081).
 
 2021-12-13 02:09 UTC - Added Secure Token & Identity Management services
 
@@ -10,6 +10,17 @@ Basic script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as
 - Type `cve`, hit tab, enter
 
 And you're done.
+
+## What it does
+- Automatically detects the version and required steps
+- Backs up existing files to .bak files
+- Applies the workarounds recommended by VMware
+- Skips any steps that are already applied
+- Reports status as it goes
+- Provides a summary at the end - verification is more accurate / granular than the KB steps
+
+### What it does..n't
+- 6.5 PSC Client Service
 
 ### If you don't like quick and dirty..
 Apply workarounds and verify

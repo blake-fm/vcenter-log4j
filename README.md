@@ -2,6 +2,7 @@
 Script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as per the [VMware KB article](https://kb.vmware.com/s/article/87081).
 
 2021-12-13 02:09 UTC - Added Secure Token & Identity Management services
+2021-12-13 12:46 UTC - Added PSC Client for 6.5 - see below
 
 ## Quick and dirty
 - SSH to vCenter
@@ -20,7 +21,7 @@ And you're done.
 - Provides a summary at the end - verification is more accurate / granular than the KB steps
 
 ### What it does..n't
-- 6.5 PSC Client Service
+- PSC Client.. ish - see below
 
 ### If you don't like quick and dirty..
 Apply workarounds and verify
@@ -35,9 +36,12 @@ Rollback - very basic, copies the .bak files over the patched files, restarts th
 ```
 cve-workaround -rollback
 ```
+PSC Client Service for 6.5 - 100% untested.  Any feedback is welcome.
+```
+cve-workaround -sprayandpray65
+```
 
 ### Notes
-
 Detects version and applies the relevant workarounds.  Skips and reports per workaround step, if it thinks that workaround has been applied (safe to re-execute).
 
 #### Services not starting / permissions fix

@@ -2,6 +2,7 @@
 Script to workaround VMware vCenter log4j vulnerability CVE-2021-44228, as per the [VMware KB article](https://kb.vmware.com/s/article/87081).
 
 2021-12-13 02:09 UTC - Added Secure Token & Identity Management services
+
 2021-12-13 12:46 UTC - Added PSC Client for 6.5 - see below
 
 ## Quick and dirty

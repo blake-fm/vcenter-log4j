@@ -20,7 +20,7 @@ cve-workaround -v
 ```
 Rollback - very basic, copies the .bak files over the patched files, restarts the services, and prints status messages.
 ```
-rollback-workaround
+cve-workaround -rollback
 ```
 
 ### Notes

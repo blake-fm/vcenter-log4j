@@ -16,9 +16,9 @@ vCenterVersion=$(vpxd -v | sed -r 's/.+ ([0-9]\.[0-9]).*/\1/')
 
 # Formatted logger
 flog () {
-  printf "%-25s %s\n" "$1" "$2"
+  printf "%-30s %s\n" "$1" "$2"
 }
-# Removes the scarty 
+# Logging system
 logmsg () {
   case $1 in
     -confirm)
@@ -31,7 +31,7 @@ logmsg () {
       flog "WARNING" "$2"
       ;;
     -skip)
-      flog "SKIPPED" "$2"
+      flog "SKIPPED" "Workaround already applied to $currFile"
       ;;
     -big)
       printf "\n%s\n\n" "$2"
@@ -51,6 +51,9 @@ logmsg () {
     -norollback)
       flog "$currService" "Nothing to roll back."
       ;;
+    -backupmissing)
+      flog "$currService" "Backup file not detected - cancelling this workaround."
+      ;;
     *)
       flog "$1" "$2"
       ;;
@@ -58,7 +61,7 @@ logmsg () {
 }
 verify-workaround () {
   # vMON
-  rawProcCount=$(ps auxww | grep '/usr/java/jre-vmware/bin/' | wc -l)
+  rawProcCount=$(ps auxww | grep '/usr/java/jre-vmware' | wc -l)
   trueProcCount=$(ps auxww | grep '\-Dlog4j2.formatMsgNoLookups=true' | wc -l)
   logmsg -big "Verification:"
   logmsg "Number of processes running formatMsgNoLookups=true: $trueProcCount"
@@ -68,22 +71,17 @@ verify-workaround () {
     logmsg -error "Process count mismatch.  Got $rawProcCount JRE processes, but confirmed $trueProcCount.  Confirm using: ps aux | grep formatMsgNoLookups"
   fi
 
-  # Update Manager
   if [ $vCenterVersion == '7.0' ]; then
+    # Update Manager
     cd /usr/lib/vmware-updatemgr/bin/jetty/
-    javaCount=$(java -jar start.jar --list-config 2>/dev/null | grep 'log4j2\.formatMsgNoLookups = true (' | wc -l)
-    cd - >/dev/null
-    if [ $javaCount -ne 0 ]; then
+    if [ $(java -jar start.jar --list-config 2>/dev/null | grep 'log4j2\.formatMsgNoLookups = true (' | wc -l) -ne 0 ]; then
       logmsg -confirm "Update Manager workaround."
     else
       logmsg -error "Update Manager workaround may have failed.  Manually confirm using: cd /usr/lib/vmware-updatemgr/bin/jetty/ && java -jar start.jar --list-config"
     fi
-  fi
-
-  # DBCC
-  if [ $vCenterVersion == '7.0' ]; then
-    dbccCount=$(grep -i jndilookup /usr/lib/vmware-dbcc/lib/log4j-core-2.8.2.jar | wc -l)
-    if [ $dbccCount -eq 0 ]; then
+    cd - >/dev/null
+    # DBCC
+    if [ $(grep -i jndilookup /usr/lib/vmware-dbcc/lib/log4j-core-2.8.2.jar | wc -l) -eq 0 ]; then
       logmsg -confirm "DBCC Utility workaround."
     else
       logmsg -error "DBCC Utility reports that JndiLookup has not been removed."
@@ -112,6 +110,27 @@ verify-workaround () {
     else
       logmsg -error "CM Service reports that JndiLookup has not been removed."
     fi
+  # Secure Token Service
+    currService="Secure Token Service"
+    intr-check-process "vmware-stsd"
+  # Identity Management Service
+    currService="Identity Management Service"
+    intr-check-process "vmware-sts-idmd"
+  fi
+
+}
+intr-check-process () {
+  svcName=$1
+  rawProcCount=$(($(ps auxww | grep " $svcName " | wc -l) - 1))
+  trueProcCount=$(($(ps auxww | grep " $svcName .*-Dlog4j2.formatMsgNoLookups=true " | wc -l) - 1))
+  if [ $trueProcCount -gt 0 ]; then
+    if [ $rawProcCount -eq $trueProcCount ]; then
+      logmsg -confirm "$currService - all $trueProcCount processes are running workaround."
+    else
+      logmsg -error "Process count mismatch.  Got $rawProcCount $currService processes, but confirmed $trueProcCount.  Confirm using: ps auxww | grep formatMsgNoLookups"
+    fi
+  else
+    logmsg -warn "$currService is not running."
   fi
 }
 apply-workaround () {
@@ -121,7 +140,7 @@ apply-workaround () {
   if [ -f $currFile ]; then
     logmsg -detected
     if [ $(grep '^log4j_arg="-Dlog4j2.formatMsgNoLookups=true"$' $currFile | wc -l) -ne 0 ]; then
-      logmsg -skip "Workaround already applied to $currFile"
+      logmsg -skip
     else
       logmsg -apply
       cp -aiv $currFile{,.bak}
@@ -147,15 +166,14 @@ apply-workaround () {
     if [ -f $currFile ]; then
       logmsg -detected
       if [ $(grep 'Dlog4j2\.formatMsgNoLookups=true' $currFile | wc -l) -ne 0 ]; then
-        logmsg -skip "Workaround already applied to $currFile"
+        logmsg -skip
       else
         logmsg -apply
         cp -aiv $currFile{,.bak}
         echo '# Workaround CVE-2021-44228
 -Dlog4j2.formatMsgNoLookups=true
 # END WORKAROUND' >> $currFile
-        logmsg -restart
-        service-control --restart vmware-updatemgr
+        intr-restart-service vmware-updatemgr
       fi
     else
       logmsg -error "Could not detect $currService."
@@ -168,13 +186,12 @@ apply-workaround () {
   if [ -f $currFile ]; then
     logmsg -detected
     if [ $(grep -i jndilookup $currFile | wc -l) -eq 0 ]; then
-      logmsg -skip "Workaround already applied to $currFile"
+      logmsg -skip
     else
       logmsg -apply
       cp -aiv $currFile{,.bak}
       zip -q -d $currFile org/apache/logging/log4j/core/lookup/JndiLookup.class
-      logmsg -restart
-      service-control --restart vmware-analytics
+      intr-restart-service vmware-analytics
     fi
   elif [ $vCenterVersion == '7.0' ]; then
     logmsg -error "Could not detect $currService."
@@ -189,7 +206,7 @@ apply-workaround () {
     if [ -f $currFile ]; then
       logmsg -detected
       if [ $(grep -i jndilookup $currFile | wc -l) -eq 0 ]; then
-        logmsg -skip "Workaround already applied to $currFile"
+        logmsg -skip
       else
         logmsg -apply
         cp -aiv $currFile{,.bak}
@@ -208,77 +225,120 @@ apply-workaround () {
     if [ -f $currFile ]; then
       logmsg -detected
       if [ $(grep -i jndilookup $currFile | wc -l) -eq 0 ]; then
-        logmsg -skip "Workaround already applied to $currFile"
+        logmsg -skip
       else
         logmsg -apply
         cp -aiv $currFile{,.bak}
         zip -q -d $currFile org/apache/logging/log4j/core/lookup/JndiLookup.class
-        logmsg -restart
-        service-control --restart vmware-cm
+        intr-restart-service vmware-cm
       fi
     else
       logmsg -error "Could not detect $currService"
     fi
   fi
+
+  # Secure Token Service
+  currService="Secure Token Service"
+  currFile="/etc/rc.d/init.d/vmware-stsd"
+  if [ $vCenterVersion == '6.7' ] || [ $vCenterVersion == '6.5' ]; then
+    if [ -f $currFile ]; then
+      logmsg -detected
+      if [ $(grep -E '^[ ]+-Dlog4j2.formatMsgNoLookups=true \\$' $currFile | wc -l) -gt 0 ]; then
+        logmsg -skip
+      else
+        logmsg -apply
+        cp -aiv $currFile{,.bak}
+        if [ -f $currFile.bak ]; then
+          sed -r 's#([ ]+)(-Dauditlog.dir=/var/log/audit/sso-events  \\)#\1\2\n\1-Dlog4j2.formatMsgNoLookups=true \\#' $currFile.bak > $currFile
+        else
+          logmsg -backupmissing
+        fi
+        intr-restart-service vmware-stsd
+      fi
+    else
+      logmsg -error "Could not detect $currService"
+    fi
+  fi
+
+  # Identity Management Service
+  currService="Identity Management"
+  currFile="/etc/rc.d/init.d/vmware-sts-idmd"
+  if [ $vCenterVersion == '6.7' ] || [ $vCenterVersion == '6.5' ]; then
+    if [ -f $currFile ]; then
+      logmsg -detected
+      if [ $(grep -E '^[ ]+-Dlog4j2.formatMsgNoLookups=true \\$' $currFile | wc -l) -gt 0 ]; then
+        logmsg -skip
+      else
+        logmsg -apply
+        cp -aiv $currFile{,.bak}
+        if [ -f $currFile.bak ]; then
+          sed -r 's#([ ]+)(-Dlog4j.configurationFile=file://\$PREFIX/share/config/log4j2.xml \\)#\1\2\n\1-Dlog4j2.formatMsgNoLookups=true \\#' $currFile.bak > $currFile
+        else
+          logmsg -backupmissing
+        fi
+        intr-restart-service vmware-sts-idmd
+      fi
+    else
+      logmsg -error "Could not detect $currService"
+    fi
+  fi
+
   printf "\n\n\n"
+}
+intr-restart-service () {
+        logmsg -restart
+        service-control --stop $1
+        service-control --start $1
 }
 rollback-workaround () {
   # vMON
   currService="vMON Service"
   currFile="/usr/lib/vmware-vmon/java-wrapper-vmon"
-  if [ -f $currFile.bak ]; then
-    logmsg -rollback
-    cp -av $currFile{.bak,}
-    logmsg -restart
-    service-control --stop --all
-    service-control --start --all
-  else
-    logmsg -norollback
-  fi
+  intr-rollback "--all"
 
   # Update Manager
   currService="Update Manager Service"
   currFile="/usr/lib/vmware-updatemgr/bin/jetty/start.ini"
-  if [ -f $currFile.bak ]; then
-    logmsg -rollback
-    cp -av $currFile{.bak,}
-    logmsg -restart
-    service-control --restart vmware-updatemgr
-  else
-    logmsg -norollback
-  fi
+  intr-rollback "vmware-updatemgr"
 
   # Analytics
   currService="Analytics Service"
   currFile="/usr/lib/vmware/common-jars/log4j-core-2.8.2.jar"
-  if [ -f $currFile.bak ]; then
-    logmsg -rollback
-    cp -av $currFile{.bak,}
-    logmsg -restart
-    service-control --restart vmware-analytics
-  else
-    logmsg -norollback
-  fi
+  intr-rollback "vmware-analytics"
 
   # DBCC Utility
   currService="DBCC Utility"
   currFile="/usr/lib/vmware-dbcc/lib/log4j-core-2.8.2.jar"
-  if [ -f $currFile.bak ]; then
-    logmsg -rollback
-    cp -av $currFile{.bak,}
-    logmsg "$currService" "No restart required."
-  else
-    logmsg -norollback
-  fi
+  intr-rollback -noservice
 
   # CM Service
   currService="CM service"
   currFile="/usr/lib/vmware-cm/lib/log4j-core.jar"
+  intr-rollback "vmware-cm"
+
+  # Secure Token Service
+  currService="Secure Token Service"
+  currFile="/etc/rc.d/init.d/vmware-stsd"
+  intr-rollback "vmware-stsd"
+
+  # Identity Management Service
+  currService="Identity Management Service"
+  currFile="/etc/rc.d/init.d/vmware-sts-idmd"
+  intr-rollback "vmware-sts-idmd"
+}
+intr-rollback () {
   if [ -f $currFile.bak ]; then
     logmsg -rollback
     cp -av $currFile{.bak,}
-    logmsg -restart
-    service-control --restart vmware-cm
+    if [ $1 != "-noservice" ]; then
+      # if [ $vCenterVersion == 6.5 ]; then
+        intr-restart-service
+      # else
+      #   service-control --restart $1
+      # fi
+    else
+      logmsg "$currService" "No restart required."
+    fi
   else
     logmsg -norollback
   fi

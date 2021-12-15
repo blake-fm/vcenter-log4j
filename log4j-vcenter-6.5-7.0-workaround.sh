@@ -159,8 +159,8 @@ internal-create-backup-and-verify () {
 }
 internal-verify-workaround () {
   # vMON
-  rawProcCount=$(ps auxww | grep '/usr/java/jre-vmware' | wc -l)
-  trueProcCount=$(ps auxww | grep '\-Dlog4j2.formatMsgNoLookups=true' | wc -l)
+  rawProcCount=$(($(ps auxww | grep '/usr/java/jre-vmware' | wc -l) - 1))
+  trueProcCount=$(($(ps auxww | grep '\-Dlog4j2.formatMsgNoLookups=true' | wc -l) - 1))
   logmsg -big "Verification:"
   logmsg -big "Number of processes running formatMsgNoLookups=true: $trueProcCount"
   if [ $rawProcCount -eq $trueProcCount ]; then
